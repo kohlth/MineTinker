@@ -6,10 +6,12 @@ import de.flo56958.MineTinker.Modifiers.Modifier;
 import de.flo56958.MineTinker.Utilities.ConfigurationManager;
 import de.flo56958.MineTinker.Utilities.nms.NBTUtils;
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -19,6 +21,7 @@ import java.util.*;
 public class Haste extends Modifier {
 
     private static Haste instance;
+    private double attackSpeedPerLevel;
 
     public static Haste instance() {
         synchronized (Haste.class) {
@@ -37,7 +40,7 @@ public class Haste extends Modifier {
 
     @Override
     public List<ToolType> getAllowedTools() {
-        return Arrays.asList(ToolType.AXE, ToolType.CROSSBOW, ToolType.PICKAXE, ToolType.SHOVEL, ToolType.SHEARS, ToolType.FISHINGROD);
+        return Arrays.asList(ToolType.AXE, ToolType.CROSSBOW, ToolType.SWORD, ToolType.TRIDENT, ToolType.PICKAXE, ToolType.SHOVEL, ToolType.SHEARS, ToolType.FISHINGROD);
     }
 
     private Haste() {
@@ -54,6 +57,11 @@ public class Haste extends Modifier {
     }
 
     @Override
+    public List<Attribute> getAppliedAttributes() {
+        return Collections.singletonList(Attribute.GENERIC_ATTACK_SPEED);
+    }
+
+    @Override
     public void reload() {
     	FileConfiguration config = getConfig();
     	config.options().copyDefaults(true);
@@ -66,6 +74,7 @@ public class Haste extends Modifier {
         config.addDefault("Color", "%DARK_RED%");
         config.addDefault("MaxLevel", 5);
         config.addDefault("OverrideLanguagesystem", false);
+        config.addDefault("AttackSpeedPerLevel", 0.05);
 
         config.addDefault("EnchantCost", 10);
         config.addDefault("Enchantable", false);
@@ -84,6 +93,8 @@ public class Haste extends Modifier {
         ConfigurationManager.loadConfig("Modifiers" + File.separator, getFileName());
 
         init(Material.REDSTONE_BLOCK, true);
+
+        this.attackSpeedPerLevel = config.getDouble("AttackSpeedPerLevel", 0.05);
     }
 
     @Override
@@ -91,17 +102,26 @@ public class Haste extends Modifier {
         ItemMeta meta = tool.getItemMeta();
 
         if (meta != null) {
+            if (meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_DAMAGE) == null || meta.getAttributeModifiers(Attribute.GENERIC_ATTACK_DAMAGE).isEmpty()) modManager.addToolAttributes(tool);
             if (ToolType.FISHINGROD.contains(tool.getType())) {
                 meta.addEnchant(Enchantment.LURE, modManager.getModLevel(tool, this), true);
             } else if (ToolType.CROSSBOW.contains(tool.getType())) {
                 if (NBTUtils.isOneFourteenCompatible()) meta.addEnchant(Enchantment.QUICK_CHARGE, modManager.getModLevel(tool, this), true);
+            } else if (ToolType.SWORD.contains(tool.getType()) || ToolType.TRIDENT.contains(tool.getType())) {
+                meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
+                meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, new AttributeModifier(UUID.randomUUID(), "generic.attackSpeed",
+                        attackSpeedPerLevel * modManager.getModLevel(tool, this), AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
+            } else if (ToolType.AXE.contains(tool.getType())) {
+                meta.addEnchant(Enchantment.DIG_SPEED, modManager.getModLevel(tool, this), true);
+                meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
+                meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, new AttributeModifier(UUID.randomUUID(), "generic.attackSpeed",
+                        attackSpeedPerLevel * modManager.getModLevel(tool, this), AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
             } else {
                 meta.addEnchant(Enchantment.DIG_SPEED, modManager.getModLevel(tool, this), true);
             }
 
             tool.setItemMeta(meta);
         }
-
         return true;
     }
 }

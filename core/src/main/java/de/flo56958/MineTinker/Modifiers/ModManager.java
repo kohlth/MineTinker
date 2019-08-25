@@ -343,6 +343,12 @@ public class ModManager {
                     meta.removeItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
 
+                if (Main.getPlugin().getConfig().getBoolean("HideAttributes")) {
+                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                } else {
+                    meta.removeItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                }
+
                 item.setItemMeta(meta);
             }
         }
@@ -653,6 +659,7 @@ public class ModManager {
                 }
             }
 
+            addToolAttributes(is);
             addArmorAttributes(is);
 
             if (meta.getAttributeModifiers() == null) {
@@ -673,6 +680,43 @@ public class ModManager {
         }
 
         return true;
+    }
+
+    //TODO: Add all other tools
+    public void addToolAttributes(ItemStack is) {
+        double baseAttackDamage = 0.0D;
+
+        switch(is.getType()) {
+            case WOODEN_AXE:
+            case GOLDEN_AXE:
+            case DIAMOND_SWORD:
+                baseAttackDamage = 7.0D;
+                break;
+            case WOODEN_SWORD:
+            case GOLDEN_SWORD:
+                baseAttackDamage = 4.0D;
+                break;
+            case IRON_SWORD:
+                baseAttackDamage = 6.0D;
+                break;
+            case STONE_SWORD:
+                baseAttackDamage = 5.0D;
+                break;
+            case IRON_AXE:
+            case DIAMOND_AXE:
+            case STONE_AXE:
+            case TRIDENT:
+                baseAttackDamage = 9.0D;
+        }
+        if (baseAttackDamage - 1 <= 0.0D) return;
+
+        ItemMeta meta = is.getItemMeta();
+
+        if (meta != null) {
+            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, new AttributeModifier(UUID.randomUUID(), "generic.attackDamage",
+                    baseAttackDamage - 1, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
+            is.setItemMeta(meta);
+        }
     }
 
     public void addArmorAttributes(ItemStack is) {
